@@ -44,7 +44,7 @@ jobs:
           fi
 
       - name: Build
-        run: cargo build --locked --release --target "${{ matrix.target }}" -p ponchi
+        run: cargo build --locked --release --target "${{ matrix.target }}"
 
       # The Yomogi font is embedded in the binary, so the executable is fully
       # self-contained — ship it as a single file per target.
@@ -76,7 +76,7 @@ jobs:
           mkdir -p release
           cp artifacts/ponchi-* release/
           # Ship the OFL notice for the embedded Yomogi font.
-          cp crates/ponchi/assets/fonts/Yomogi-OFL.txt release/Yomogi-OFL.txt
+          cp assets/fonts/Yomogi-OFL.txt release/Yomogi-OFL.txt
           ( cd release && sha256sum ponchi-* > SHA256SUMS )
           ls -l release
 

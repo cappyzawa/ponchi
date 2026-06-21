@@ -2,13 +2,10 @@
 //!
 //! Arguments are parsed by hand (no clap) to keep the dependency surface small.
 
-mod raster;
-mod server;
-
-use crate::raster::svg_to_png_file;
-use ponchi_core::input::parse_and_resolve;
-use ponchi_core::render::{DEFAULT_FONT_FAMILY, render_scene_with_font};
-use ponchi_core::scene::Scene;
+use ponchi::input::parse_and_resolve;
+use ponchi::raster::svg_to_png_file;
+use ponchi::render::{DEFAULT_FONT_FAMILY, render_scene_with_font};
+use ponchi::scene::Scene;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -147,7 +144,7 @@ fn cmd_serve(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
 
     let extra_fonts_dir = common.font_path;
     let initial = empty_scene();
-    crate::server::serve(
+    ponchi::server::serve(
         port,
         initial,
         PathBuf::from("out"),
@@ -158,9 +155,9 @@ fn cmd_serve(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
 
 /// A minimal valid starting scene shown before any POST arrives.
 fn empty_scene() -> Scene {
-    use ponchi_core::scene::{Canvas, Text};
+    use ponchi::scene::{Canvas, Text};
     Scene {
-        schema_version: ponchi_core::scene::SCHEMA_VERSION.to_string(),
+        schema_version: ponchi::scene::SCHEMA_VERSION.to_string(),
         title: "ponchi".into(),
         seed: 1,
         canvas: Canvas {

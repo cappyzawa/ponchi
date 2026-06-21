@@ -7,8 +7,8 @@
 //! PNG directly) and are written via atomic rename after a successful render.
 
 use crate::raster::RasterContext;
-use ponchi_core::render::render_scene_with_font;
-use ponchi_core::scene::Scene;
+use crate::render::render_scene_with_font;
+use crate::scene::Scene;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -311,7 +311,7 @@ fn handle_post_scene(
         Err(_) => return json_error(400, "body is not valid UTF-8"),
     };
 
-    let scene = match ponchi_core::input::parse_and_resolve(text) {
+    let scene = match crate::input::parse_and_resolve(text) {
         Ok(s) => s,
         Err(e) => return json_error(400, &format!("invalid scene: {e}")),
     };

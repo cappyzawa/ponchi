@@ -14,9 +14,6 @@ permissions:
   contents: read
 
 jobs:
-  # Native crates (binary + core): format, lint, and test. The WASM crate is
-  # checked separately below because it targets wasm32 and legitimately pulls in
-  # wasm-bindgen, which the native guardrail forbids.
   lint-and-test:
     runs-on: ubuntu-22.04
     steps:
@@ -27,26 +24,11 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       - run: cargo fmt --all --check
-      - run: cargo clippy --locked -p ponchi -p ponchi-core --all-targets --all-features -- -D warnings
-      - run: cargo test --locked -p ponchi -p ponchi-core --all-features
+      - run: cargo clippy --locked --all-targets --all-features -- -D warnings
+      - run: cargo test --locked --all-features
 
-  # The WASM crate targets wasm32-unknown-unknown; only check that it compiles.
-  wasm:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # stable (v1)
-        with:
-          toolchain: stable
-          targets: wasm32-unknown-unknown
-      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
-        with:
-          key: wasm32
-      - run: cargo check --locked -p ponchi-wasm --target wasm32-unknown-unknown --release
-
-  # Guardrail for ponchi's local-only invariant: the native runtime dependency
-  # tree must contain no HTTP client / TLS / async-runtime / wasm-bindgen crate.
-  # Scoped to the native crates so the WASM crate's wasm-bindgen is not counted.
+  # Guardrail for ponchi's local-only invariant: the runtime dependency tree
+  # must contain no HTTP client / TLS / async-runtime / wasm-bindgen crate.
   no-network-deps:
     runs-on: ubuntu-22.04
     steps:
@@ -56,7 +38,7 @@ jobs:
           toolchain: stable
       - name: Forbid network-capable crates in the runtime dependency tree
         run: |
-          cargo tree --locked -e normal --prefix none -p ponchi -p ponchi-core \
+          cargo tree --locked -e normal --prefix none \
             | sed 's/ .*//' | sort -u > crates.txt
           sort -u > forbidden.txt <<'EOF'
           reqwest
