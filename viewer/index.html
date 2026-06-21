@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>draw — live viewer</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-family: system-ui, sans-serif;
+      background: #f3f3f3;
+    }
+    img {
+      max-width: 96vw;
+      max-height: 86vh;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+      background: #fff;
+    }
+    .bar { font-size: 13px; color: #555; display: flex; gap: 16px; align-items: center; }
+    a { color: #1f6feb; }
+  </style>
+</head>
+<body>
+  <img id="view" alt="diagram" src="/api/scene.png" />
+  <div class="bar">
+    <span id="status">v?</span>
+    <a href="/api/scene.svg" download="scene.svg">SVG を保存</a>
+  </div>
+  <script>
+    // Poll /api/version; when it changes, swap the PNG (cache-busted by ?v=).
+    let current = null;
+    const img = document.getElementById('view');
+    const status = document.getElementById('status');
+
+    async function poll() {
+      try {
+        const res = await fetch('/api/version', { cache: 'no-store' });
+        if (res.ok) {
+          const v = (await res.text()).trim();
+          if (v !== current) {
+            current = v;
+            img.src = '/api/scene.png?v=' + encodeURIComponent(v);
+            status.textContent = 'v' + v;
+          }
+        }
+      } catch (_) {
+        /* server not ready; retry on next tick */
+      }
+    }
+
+    poll();
+    setInterval(poll, 700);
+  </script>
+</body>
+</html>

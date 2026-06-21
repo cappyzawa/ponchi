@@ -1,0 +1,26 @@
+[package]
+name = "ponchi"
+version = "0.1.0"
+edition = "2024"
+description = "Local-only, hand-drawn-style diagram generator for aligning AI agents and humans"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/cappyzawa/ponchi"
+
+[dependencies]
+roughr = "0.12"
+usvg = "0.47"
+resvg = "0.47"
+tiny-skia = { version = "0.12", features = ["png-format"] }
+tiny_http = "0.12"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+dagre = "0.1.1"
+unicode-width = "0.2"
+
+[lib]
+name = "ponchi"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ponchi"
+path = "src/main.rs"

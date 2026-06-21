@@ -1,0 +1,12 @@
+# Rust build artifacts
+/target
+
+# Generated diagram outputs
+/out
+/scenes/current.json
+
+# macOS
+.DS_Store
+
+# Scene inputs are user-provided; do not ship samples (may contain private data)
+/scenes
