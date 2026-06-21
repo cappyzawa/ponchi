@@ -30,7 +30,7 @@ down to its structure. ponchi gives the agent a way to draw that sketch — and 
   write coordinates at all.
 - **Auto-layout**: a `layout` block lets [`dagre`](https://crates.io/crates/dagre)
   (Sugiyama-style) place nodes, route edges, and position labels automatically.
-- **CJK ready**: the bundled handwriting font (Yomogi, OFL) renders Japanese labels.
+- **CJK ready**: the embedded handwriting font (Yomogi, OFL) renders Japanese labels.
 - **Same view for human and agent**: both look at the identical server-rendered PNG.
 
 ## Build
@@ -38,6 +38,12 @@ down to its structure. ponchi gives the agent a way to draw that sketch — and 
 ```sh
 cargo build --release
 ```
+
+The Yomogi font is embedded into the binary, so `target/release/ponchi` is a
+self-contained executable — you can copy it anywhere and it keeps its hand-drawn
+look without shipping `assets/fonts` alongside it. To make additional font
+families selectable, pass `--font-path <dir>` and select one with
+`--font-family <name>`.
 
 ## Usage
 
@@ -100,7 +106,7 @@ label placement. Without a `layout` block the scene uses manual coordinates
 ```
 
 Labels may be any text, including CJK (e.g. `"label": "下書き\n作成中"`); the
-bundled Yomogi font renders them in the hand-drawn style.
+embedded Yomogi font renders them in the hand-drawn style.
 
 - Node `x`/`y` must **not** be set in auto mode (it is rejected); `w`/`h` are
   optional overrides — otherwise size is derived from the label.
@@ -130,5 +136,5 @@ ponchi is dual-licensed under either of
 
 at your option.
 
-The bundled Yomogi font is separately licensed under the SIL Open Font License
+The embedded Yomogi font is separately licensed under the SIL Open Font License
 1.1 (`assets/fonts/Yomogi-OFL.txt`); it is not covered by the licenses above.

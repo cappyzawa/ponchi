@@ -52,12 +52,13 @@ pub fn serve(
     port: Option<u16>,
     initial: Scene,
     out_dir: PathBuf,
-    fonts_dir: Option<PathBuf>,
+    extra_fonts_dir: Option<PathBuf>,
     font_family: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let token = random_token();
-    // Build the font database once; reused for every render.
-    let raster = RasterContext::new(fonts_dir.as_deref(), &font_family);
+    // Build the font database once; reused for every render. The embedded
+    // Yomogi font is always loaded; `extra_fonts_dir` adds fonts on top.
+    let raster = RasterContext::new(extra_fonts_dir.as_deref(), &font_family);
 
     let published = render_published(&raster, &initial, &font_family, 1)?;
     std::fs::create_dir_all(&out_dir)?;
