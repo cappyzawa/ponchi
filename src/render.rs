@@ -16,8 +16,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use unicode_width::UnicodeWidthStr;
 
-/// Default label font family. Yomogi is a casual handwriting font bundled in
-/// `assets/fonts`.
+/// Default label font family. Yomogi is a casual handwriting font embedded in
+/// the binary (source at `assets/fonts`), so it is always available at runtime.
 pub const DEFAULT_FONT_FAMILY: &str = "Yomogi";
 
 const STROKE_WIDTH: f32 = 2.0;

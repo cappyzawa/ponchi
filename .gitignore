@@ -10,3 +10,6 @@
 
 # Scene inputs are user-provided; do not ship samples (may contain private data)
 /scenes
+
+# Local design notes (not published)
+/PLAN*.md

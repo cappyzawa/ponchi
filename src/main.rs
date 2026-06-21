@@ -43,6 +43,9 @@ USAGE:
   ponchi render <scene.json> -o <out.png|out.svg> [--font-family F] [--font-path DIR]
   ponchi serve [--port N] [--font-family F] [--font-path DIR]
 
+The Yomogi handwriting font is embedded in the binary and always available.
+--font-path DIR loads extra fonts from DIR on top, selectable via --font-family.
+
 Default font family: {DEFAULT_FONT_FAMILY}
 Default serve port:  auto (OS-assigned free port; printed at startup)"
     );
@@ -51,30 +54,9 @@ Default serve port:  auto (OS-assigned free port; printed at startup)"
 /// Parsed common options shared by both subcommands.
 struct CommonOpts {
     font_family: String,
+    /// Optional directory of extra fonts to load on top of the always-embedded
+    /// Yomogi font, so other families can be selected via `--font-family`.
     font_path: Option<PathBuf>,
-}
-
-/// Locate the bundled fonts directory. If `--font-path` was given, use it.
-/// Otherwise prefer the current directory's `assets/fonts`, then the directory
-/// next to the executable. (Prototype: current dir wins; this is brittle if run
-/// from elsewhere, hence the explicit `--font-path` escape hatch.)
-fn resolve_fonts_dir(explicit: Option<PathBuf>) -> Option<PathBuf> {
-    if let Some(p) = explicit {
-        return Some(p);
-    }
-    let cwd = PathBuf::from("assets/fonts");
-    if cwd.is_dir() {
-        return Some(cwd);
-    }
-    if let Ok(exe) = std::env::current_exe()
-        && let Some(dir) = exe.parent()
-    {
-        let beside = dir.join("assets/fonts");
-        if beside.is_dir() {
-            return Some(beside);
-        }
-    }
-    None
 }
 
 fn cmd_render(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
@@ -112,7 +94,7 @@ fn cmd_render(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
     let scene = parse_and_resolve(&json)?;
     let svg = render_scene_with_font(&scene, &common.font_family);
 
-    let fonts_dir = resolve_fonts_dir(common.font_path);
+    let extra_fonts_dir = common.font_path;
     let ext = output
         .extension()
         .and_then(|e| e.to_str())
@@ -122,7 +104,12 @@ fn cmd_render(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
             std::fs::write(&output, svg)?;
         }
         Some("png") => {
-            svg_to_png_file(&svg, fonts_dir.as_deref(), &common.font_family, &output)?;
+            svg_to_png_file(
+                &svg,
+                extra_fonts_dir.as_deref(),
+                &common.font_family,
+                &output,
+            )?;
         }
         _ => return Err("output must end in .png or .svg".into()),
     }
@@ -155,13 +142,13 @@ fn cmd_serve(args: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         i += 1;
     }
 
-    let fonts_dir = resolve_fonts_dir(common.font_path);
+    let extra_fonts_dir = common.font_path;
     let initial = empty_scene();
     ponchi::server::serve(
         port,
         initial,
         PathBuf::from("out"),
-        fonts_dir,
+        extra_fonts_dir,
         common.font_family,
     )
 }

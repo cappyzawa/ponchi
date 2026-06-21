@@ -25,7 +25,7 @@ Concretely, this forbids:
 - any runtime HTTP-client dependency;
 - binding the server anywhere but `127.0.0.1`;
 - emitting external references (`url()`, `file:`, `http:`) in generated SVG;
-- downloading anything at runtime (the font is **bundled**, not fetched).
+- downloading anything at runtime (the font is **embedded in the binary**, not fetched).
 
 Guardrail: `cargo tree` must show **no** HTTP-client crate (reqwest / hyper / tokio /
 ureq / curl / wasm-bindgen / web-sys / js-sys). A new dependency that drags one in is

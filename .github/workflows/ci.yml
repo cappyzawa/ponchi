@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # stable (v1)
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - run: cargo fmt --all --check
+      - run: cargo clippy --locked --all-targets --all-features -- -D warnings
+      - run: cargo test --locked --all-features
+
+  # Guardrail for ponchi's local-only invariant: the runtime dependency tree
+  # must contain no HTTP client / TLS / async-runtime / wasm-bindgen crate.
+  no-network-deps:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # stable (v1)
+        with:
+          toolchain: stable
+      - name: Forbid network-capable crates in the runtime dependency tree
+        run: |
+          cargo tree --locked -e normal --prefix none \
+            | sed 's/ .*//' | sort -u > crates.txt
+          sort -u > forbidden.txt <<'EOF'
+          reqwest
+          hyper
+          ureq
+          curl
+          isahc
+          surf
+          attohttpc
+          tokio
+          native-tls
+          openssl
+          rustls
+          wasm-bindgen
+          web-sys
+          js-sys
+          EOF
+          if comm -12 crates.txt forbidden.txt | grep -q .; then
+            echo "Forbidden network-capable crate(s) found in the dependency tree:"
+            comm -12 crates.txt forbidden.txt
+            exit 1
+          fi
+          echo "OK: no network-capable crates in the runtime dependency tree."
