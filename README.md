@@ -10,6 +10,11 @@ Everything stays on the local machine: there is **no network access at runtime**
 The name comes from *ponchi-e*: extracting the essential shape of an idea by
 sketching it roughly.
 
+![A ponchi diagram of a small review workflow, hand-drawn style](docs/example.png)
+
+> The diagram above comes from ~15 lines of JSON — nodes and edges only, no
+> coordinates (see [Auto-layout](#auto-layout)).
+
 ## Why
 
 Agents are good at producing detailed prose. But for an unfamiliar area, a human
