@@ -82,10 +82,9 @@ If absent, install by **either** route (pick what fits the environment):
   OS/arch, verify it against `SHA256SUMS`, `chmod +x`, and put it on `PATH`.
   Assets: `ponchi-x86_64-unknown-linux-gnu`, `ponchi-aarch64-apple-darwin`,
   `ponchi-x86_64-apple-darwin`.
-- **Build from source** (needs a Rust toolchain). The repo is a Cargo
-  workspace, so name the `ponchi` package explicitly:
+- **Build from source** (needs a Rust toolchain):
   ```sh
-  cargo install --git https://github.com/cappyzawa/ponchi ponchi
+  cargo install --git https://github.com/cappyzawa/ponchi
   ```
 
 The handwriting font is embedded in the binary, so it is self-contained — no

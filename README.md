@@ -41,11 +41,8 @@ down to its structure. ponchi gives the agent a way to draw that sketch — and 
 ## Build
 
 ```sh
-cargo build --release -p ponchi
+cargo build --release
 ```
-
-This is a Cargo workspace; `-p ponchi` builds just the native binary (the
-`ponchi-wasm` crate targets `wasm32-unknown-unknown`).
 
 The Yomogi font is embedded into the binary, so `target/release/ponchi` is a
 self-contained executable — you can copy it anywhere and it keeps its hand-drawn
@@ -59,10 +56,10 @@ Write a scene (see the schema below) to a file, then:
 
 ```sh
 # One-shot render to a file
-cargo run --release -p ponchi -- render scene.json -o out/diagram.png
+cargo run --release -- render scene.json -o out/diagram.png
 
 # Live viewer (omit --port to get an OS-assigned free port, printed at startup)
-cargo run --release -p ponchi -- serve
+cargo run --release -- serve
 # -> prints the URL and a Bearer token
 
 # Push a scene (the viewer auto-refreshes when the version changes)
