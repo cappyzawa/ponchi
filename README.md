@@ -116,6 +116,21 @@ embedded Yomogi font renders them in the hand-drawn style.
   are manual overlays (coordinates required); with `fit: "grow"` the canvas grows
   to include them so annotations are not clipped.
 
+## Using ponchi from an AI agent
+
+A [Claude Code](https://docs.claude.com/en/docs/claude-code) skill lives in
+[`skills/ponchi/`](skills/ponchi/SKILL.md). Copy it into your skills directory:
+
+```sh
+cp -r skills/ponchi ~/.claude/skills/ponchi
+```
+
+Then an agent can drive ponchi for you: it starts the live viewer (which you
+watch in the browser), writes a scene, pushes it, and reads back the rendered
+PNG to self-check and refine — so you and the agent are looking at the same
+picture while a design takes shape. The skill is self-contained; it explains
+setup, the serve loop, and the scene format on its own.
+
 ## Design notes
 
 - **Local-only**: server binds `127.0.0.1` only; `POST /api/scene` needs a
