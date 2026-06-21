@@ -1,0 +1,18 @@
+[package]
+name = "ponchi-core"
+description = "Platform-independent core of ponchi: scene model, input resolution, auto-layout, and SVG rendering"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+roughr.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+dagre.workspace = true
+unicode-width.workspace = true
+
+[lib]
+name = "ponchi_core"
+path = "src/lib.rs"
