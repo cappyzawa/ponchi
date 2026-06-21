@@ -1,0 +1,19 @@
+[package]
+name = "ponchi"
+description = "Local-only, hand-drawn-style diagram generator for aligning AI agents and humans"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+ponchi-core.workspace = true
+serde_json.workspace = true
+usvg.workspace = true
+resvg.workspace = true
+tiny-skia.workspace = true
+tiny_http.workspace = true
+
+[[bin]]
+name = "ponchi"
+path = "src/main.rs"

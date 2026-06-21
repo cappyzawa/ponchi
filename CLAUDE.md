@@ -27,9 +27,11 @@ Concretely, this forbids:
 - emitting external references (`url()`, `file:`, `http:`) in generated SVG;
 - downloading anything at runtime (the font is **embedded in the binary**, not fetched).
 
-Guardrail: `cargo tree` must show **no** HTTP-client crate (reqwest / hyper / tokio /
+Guardrail: for the native crates (`cargo tree -p ponchi -p ponchi-core`) the
+dependency tree must show **no** HTTP-client crate (reqwest / hyper / tokio /
 ureq / curl / wasm-bindgen / web-sys / js-sys). A new dependency that drags one in is
-a red flag — find another way.
+a red flag — find another way. `ponchi-wasm` legitimately uses `wasm-bindgen` and is
+exempt from this check; keeping it a separate crate is what preserves the guarantee.
 
 ## Scenes are user input — never commit samples
 
