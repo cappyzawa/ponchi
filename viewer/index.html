@@ -6,39 +6,182 @@
   <title>draw — live viewer</title>
   <style>
     :root { color-scheme: light dark; }
+    html, body { height: 100%; }
     body {
       margin: 0;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
       font-family: system-ui, sans-serif;
       background: #f3f3f3;
+      overflow: hidden;
+    }
+    /* The stage fills the viewport; the control bar floats on top of it (see
+       .bar) so it stays in view no matter where the image sits. Grid +
+       `margin: auto` centers the image when it fits and, unlike a flex
+       container, still lets you scroll to every edge once it overflows. */
+    .stage {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      overflow: auto;
+      /* Extra top padding keeps the centered image clear of the floating bar. */
+      padding: 52px 12px 12px;
+      box-sizing: border-box;
     }
     img {
-      max-width: 96vw;
-      max-height: 86vh;
+      margin: auto;
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
       background: #fff;
     }
-    .bar { font-size: 13px; color: #555; display: flex; gap: 16px; align-items: center; }
+    /* Fit mode: shrink to the stage. Manual mode sets an explicit inline width
+       and drops these caps so the image can grow past the viewport. */
+    img.fit { max-width: 100%; max-height: 100%; }
+    /* Floating control bar, pinned to the top-center of the viewport and above
+       the stage so it is always reachable without scrolling to it. */
+    .bar {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      font-size: 13px;
+      color: #555;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(4px);
+    }
+    .zoom { display: flex; gap: 4px; align-items: center; }
+    .zoom button {
+      font: inherit;
+      width: 28px;
+      height: 28px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fff;
+      color: #333;
+      cursor: pointer;
+      line-height: 1;
+    }
+    .zoom button:hover { background: #f0f0f0; }
+    .zoom button.fit { width: auto; padding: 0 10px; }
+    .zoom button.fit.active { border-color: #1f6feb; color: #1f6feb; }
+    #pct { min-width: 48px; text-align: center; font-variant-numeric: tabular-nums; }
     a { color: #1f6feb; }
   </style>
 </head>
 <body>
-  <img id="view" alt="diagram" src="/api/scene.png" />
+  <div class="stage">
+    <img id="view" class="fit" alt="diagram" src="/api/scene.png" />
+  </div>
   <div class="bar">
     <span id="status">v?</span>
-    <a href="/api/scene.svg" download="scene.svg">SVG を保存</a>
+    <div class="zoom">
+      <button id="zoom-out" type="button" title="Zoom out ( - )" disabled>&minus;</button>
+      <span id="pct">100%</span>
+      <button id="zoom-in" type="button" title="Zoom in ( + )" disabled>+</button>
+      <button id="zoom-fit" class="fit" type="button" title="Fit to window ( 0 )">Fit</button>
+    </div>
+    <a href="/api/scene.svg" download="scene.svg">Save SVG</a>
   </div>
   <script>
-    // Poll /api/version; when it changes, swap the PNG (cache-busted by ?v=).
-    let current = null;
     const img = document.getElementById('view');
     const status = document.getElementById('status');
+    const pct = document.getElementById('pct');
+    const fitBtn = document.getElementById('zoom-fit');
+    const zoomInBtn = document.getElementById('zoom-in');
+    const zoomOutBtn = document.getElementById('zoom-out');
 
+    // Zoom factor relative to the image's natural pixel size (1 = 100%).
+    // `null` means fit-to-stage; the actual factor is then derived from the
+    // rendered size on demand. Persisted across poll-driven image swaps.
+    let zoom = null;
+    const MIN = 0.1, MAX = 8, STEP = 1.2;
+
+    // Lower bound on the zoom factor. Normally 10%, but for images whose fit
+    // scale is already below that (huge canvases), drop to "1px on the longest
+    // side" so that stepping out from fit always shrinks instead of clamping up.
+    function minScale() {
+      const maxDim = Math.max(img.naturalWidth, img.naturalHeight);
+      return maxDim > 0 ? Math.min(MIN, 1 / maxDim) : MIN;
+    }
+    const clampScale = (v) => Math.min(MAX, Math.max(minScale(), v));
+
+    // Effective factor while in fit mode: rendered width / natural width.
+    function effectiveScale() {
+      if (!img.naturalWidth) return 1;
+      return img.getBoundingClientRect().width / img.naturalWidth;
+    }
+
+    function render() {
+      if (zoom === null) {
+        img.classList.add('fit');
+        img.style.width = '';
+      } else {
+        img.classList.remove('fit');
+        img.style.width = (img.naturalWidth * zoom) + 'px';
+      }
+      const shown = zoom === null ? effectiveScale() : zoom;
+      pct.textContent = Math.round(shown * 100) + '%';
+      fitBtn.classList.toggle('active', zoom === null);
+    }
+
+    function zoomBy(factor) {
+      // Natural size is required to anchor the factor; ignore until loaded.
+      if (!img.naturalWidth) return;
+      const base = zoom === null ? effectiveScale() : zoom;
+      zoom = clampScale(base * factor);
+      render();
+    }
+
+    function fit() { zoom = null; render(); }
+
+    zoomInBtn.addEventListener('click', () => zoomBy(STEP));
+    zoomOutBtn.addEventListener('click', () => zoomBy(1 / STEP));
+    fitBtn.addEventListener('click', fit);
+
+    // Ctrl+wheel (and trackpad pinch, which the browser reports as ctrlKey
+    // wheel events) zooms instead of scrolling. Bound on `window` so it also
+    // pre-empts the browser's own zoom while the pointer is over the bar, and
+    // the step follows the delta magnitude so a light pinch is not a huge jump.
+    window.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey || !img.naturalWidth) return;
+      e.preventDefault();
+      const unit = e.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16
+        : e.deltaMode === WheelEvent.DOM_DELTA_PAGE ? window.innerHeight
+        : 1;
+      const delta = e.deltaY * unit;
+      if (delta !== 0) zoomBy(Math.exp(-delta * 0.002));
+    }, { passive: false });
+
+    // Keyboard: +/= zoom in, - zoom out, 0 fit. Ignore while typing in a field.
+    window.addEventListener('keydown', (e) => {
+      if (e.target.matches('input, textarea')) return;
+      if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomBy(STEP); }
+      else if (e.key === '-') { e.preventDefault(); zoomBy(1 / STEP); }
+      else if (e.key === '0') { e.preventDefault(); fit(); }
+    });
+
+    // Re-fit the percentage readout when the window resizes in fit mode.
+    window.addEventListener('resize', () => { if (zoom === null) render(); });
+
+    // Enable zoom only once a natural size is known. Keep the current zoom after
+    // each poll-driven swap; the natural size may change if the canvas was
+    // resized, so recompute the explicit width on every load.
+    function onImageReady() {
+      zoomInBtn.disabled = false;
+      zoomOutBtn.disabled = false;
+      render();
+    }
+    img.addEventListener('load', onImageReady);
+    // The first image may already be cached and complete before this runs.
+    if (img.complete && img.naturalWidth) onImageReady();
+
+    // Poll /api/version; when it changes, swap the PNG (cache-busted by ?v=).
+    let current = null;
     async function poll() {
       try {
         const res = await fetch('/api/version', { cache: 'no-store' });
