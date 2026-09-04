@@ -54,11 +54,14 @@ families selectable, pass `--font-path <dir>` and select one with
 
 ## Usage
 
-Write a scene (see the schema below) to a file, then:
+Write a scene (see the schema below) to a task-specific file under the ignored
+`scenes/` directory, then:
 
 ```sh
+mkdir -p scenes
+
 # One-shot render to a file
-cargo run --release -- render scene.json -o out/diagram.png
+cargo run --release -- render scenes/review-workflow.json -o out/review-workflow.png
 
 # Live viewer (omit --port to get an OS-assigned free port, printed at startup)
 cargo run --release -- serve
@@ -68,8 +71,29 @@ cargo run --release -- serve
 curl -X POST http://127.0.0.1:<port>/api/scene \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  --data-binary @scene.json
+  --data-binary @scenes/review-workflow.json
 ```
+
+Use a name that describes the diagram instead of a generic `scene.json` so input
+and output from different diagrams remain easy to identify. The agent skill below
+also gives each concurrent session its own temporary work directory.
+
+### Share in a GitHub issue or pull request
+
+After you and the agent have refined the diagram, GitHub CLI 2.99.0 or later can
+attach the rendered PNG directly to an issue or pull request on GitHub.com or
+GitHub Enterprise Cloud when you have push access to the repository:
+
+```sh
+gh issue comment 123 --attach 'out/review-workflow.png#Review workflow diagram'
+# Or, for a pull request:
+gh pr comment 456 --attach 'out/review-workflow.png#Review workflow diagram'
+```
+
+`--attach` also works with `gh issue` and `gh pr` `create` and `edit`. This upload
+is an explicit sharing step: ponchi itself never sends the scene or rendered image
+over the network. Review the image for private content before attaching it. See
+the [GitHub CLI attachment documentation](https://gh.io/gh-attach) for details.
 
 ## Server endpoints (`serve`)
 
