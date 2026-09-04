@@ -22,50 +22,108 @@ Prefer `serve`. It gives the human a live view and lets you self-check the same
 pixels they see.
 
 1. **Make sure `ponchi` is installed** (see Setup).
-2. **Start the server in the background from a temp work dir**, capture its PID,
-   and wait until it is actually listening — poll the log, do not fixed-sleep
-   (the log is often still empty right after launch):
+2. **Start the server in the background from a session-specific temp work dir**,
+   capture its PID, and wait until it is actually listening — poll the log, do
+   not fixed-sleep (the log is often still empty right after launch):
    ```sh
-   mkdir -p /tmp/ponchi-work && cd /tmp/ponchi-work
+   PONCHI_WORK_DIR="$(mktemp -d /tmp/ponchi-work.XXXXXX)"
+   cd "$PONCHI_WORK_DIR"
    ponchi serve > serve.log 2>&1 &
    PONCHI_PID=$!
    for _ in $(seq 1 30); do grep -q listening serve.log && break; sleep 0.3; done
    cat serve.log
    # ponchi serve listening on http://127.0.0.1:<PORT>/
    # POST token (Authorization: Bearer ...): <TOKEN>
+   printf 'Work dir: %s\nServer PID: %s\n' "$PONCHI_WORK_DIR" "$PONCHI_PID"
    ```
-   The port is OS-assigned (multiple sessions won't collide). Parse `<PORT>` and
-   `<TOKEN>` from the log. Running from `/tmp/ponchi-work` keeps the output it
-   writes (`out/latest.{png,svg}`, relative to the launch dir) out of any repo.
+   The port and work dir are unique to this session, so concurrent sessions do
+   not share the server or its files. Parse `<PORT>` and `<TOKEN>` from the log.
+   The server writes `out/latest.{png,svg}` relative to `$PONCHI_WORK_DIR`, keeping
+   the output out of any repo. Record the printed `<WORK_DIR>` and `<PID>` as well;
+   shell variables may not survive into a later tool call, so substitute the
+   recorded values in the remaining steps.
 
    If your environment kills background processes between commands (some sandboxes
    do — a later `curl` then fails and the PID is gone), don't fight it: use render
    mode instead (below). serve needs a process that survives across your commands.
 3. **Tell the human the URL** so they can open it in a browser. The view
    auto-refreshes whenever you push a new scene.
-4. **Write a scene** to a temp file (see Scene format) and POST it. Scenes are
-   throwaway input — write them under `/tmp`, not in a repo:
+4. **Write a scene** to the work dir (see Scene format) and POST it. Give the file
+   a short, task-specific name instead of reusing `scene.json`; scenes are
+   throwaway input and must stay outside the repo:
    ```sh
-   # write the scene JSON to e.g. /tmp/ponchi-scene.json, then:
+   PONCHI_WORK_DIR="<WORK_DIR>"
+   PONCHI_SCENE="$PONCHI_WORK_DIR/request-lifecycle.json"
+   # Write the scene JSON to "$PONCHI_SCENE", then:
    curl -s -X POST "http://127.0.0.1:<PORT>/api/scene" \
      -H "Authorization: Bearer <TOKEN>" \
      -H "Content-Type: application/json" \
-     --data-binary @/tmp/ponchi-scene.json
+     --data-binary "@${PONCHI_SCENE}"
    # -> {"version":N}   (HTTP 400 with a message if the scene is invalid)
    ```
-5. **Self-check**: the server writes the render to `/tmp/ponchi-work/out/latest.png`
-   (relative to where you started it). Read that PNG and actually look at it.
+5. **Self-check**: read `<WORK_DIR>/out/latest.png` and actually look at it.
    Confirm the POST response `version` went up and the image matches what you
    sent — if the version rises but the picture is stale, the server isn't running.
    Anything overlapping, mislabeled, or unclear? Fix the JSON and POST again. This
    is the whole value — don't skip it.
-6. When done, stop the server: `kill "$PONCHI_PID"` (or `pkill -f "ponchi serve"`).
-   Don't rely on `kill %1` — job control may not carry across commands.
+6. When done, verify the recorded PID still belongs to this server before stopping
+   it. Don't use `pkill` or `kill %1`: the former can stop other sessions, and job
+   control may not carry across commands.
+   ```sh
+   PONCHI_PID="<PID>"
+   case "$(ps -p "$PONCHI_PID" -o command=)" in
+     *"ponchi serve"*) kill "$PONCHI_PID" ;;
+     *) printf 'Refusing to stop PID %s: not ponchi serve\n' "$PONCHI_PID" >&2; exit 1 ;;
+   esac
+   ```
 
 `render` mode is the alternative: one-shot, no server, no human view. Use it for
 CI or when you only need a file:
 ```sh
-ponchi render /tmp/ponchi-scene.json -o /tmp/diagram.png   # or .svg
+PONCHI_WORK_DIR="$(mktemp -d /tmp/ponchi-work.XXXXXX)"
+printf 'Work dir: %s\n' "$PONCHI_WORK_DIR"
+# In a later call, write <WORK_DIR>/request-lifecycle.json, then:
+ponchi render "<WORK_DIR>/request-lifecycle.json" \
+  -o "<WORK_DIR>/request-lifecycle.png"   # or use an .svg output
+```
+
+## Share on GitHub (only when asked)
+
+ponchi itself stays local-only. Uploading its output crosses that boundary, so do
+this only when the human explicitly asks to share the diagram. Immediately before
+uploading, self-check the PNG again for private or internal content.
+
+GitHub CLI 2.99.0 or later can attach the local PNG directly to an issue, pull
+request, or comment on GitHub.com or GitHub Enterprise Cloud when you have push
+access to the repository. Substitute the self-checked PNG path for `<OUTPUT_PNG>`:
+
+```sh
+gh --version
+gh issue comment 123 --attach '<OUTPUT_PNG>#Request lifecycle diagram'
+# Or, for a pull request:
+gh pr comment 456 --attach '<OUTPUT_PNG>#Request lifecycle diagram'
+```
+
+If `gh --version` reports a version older than 2.99.0, stop and tell the human an
+upgrade is required instead of trying another upload mechanism.
+
+The same repeatable `--attach` flag works with `gh issue` and `gh pr` `create`,
+`edit`, and `comment`. If the body already references the attached local path,
+`gh` rewrites that reference to the uploaded URL; otherwise it appends the image.
+See the [GitHub CLI attachment documentation](https://gh.io/gh-attach).
+
+## Cleanup
+
+After the self-check and any requested sharing are complete, remove only the
+session-specific work dir created above. Validate the recorded path before deleting
+it so a missing or incorrect value cannot broaden the cleanup target:
+
+```sh
+PONCHI_WORK_DIR="<WORK_DIR>"
+case "$PONCHI_WORK_DIR" in
+  /tmp/ponchi-work.??????) rm -r -- "$PONCHI_WORK_DIR" ;;
+  *) printf 'Refusing to remove unexpected path: %s\n' "$PONCHI_WORK_DIR" >&2; exit 1 ;;
+esac
 ```
 
 ## Setup
